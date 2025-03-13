@@ -1,0 +1,7 @@
+*.autosave
+slprj/
+.vscode/
+*.mexw64
+*.slxc
+*.original
+*.md
