@@ -131,6 +131,7 @@ extern RAMP_REFERENCE Ud_ramp;
 extern RAMP_REFERENCE Uq_ramp;
 extern RAMP_REFERENCE Id_ramp;
 extern RAMP_REFERENCE Iq_ramp;
+
 extern VSG_Params vsg_params; // 全局VSG参数实例
 
 extern float U_feedback_d, U_feedback_q;
@@ -140,7 +141,7 @@ extern void THETA_GENERATE(void);                                               
 extern void OPEN_LOOP(float Modulation);                                                     // Open loop control
 extern void VOLTAGE_CLOSED_LOOP(float V_ref);                                                // Voltage closed loop control
 extern void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedback); // Current closed loop control
-extern void PHASE_LOCKED_LOOP(void);// Phase-Locked Loop (PLL) control function
-extern void VSG_Control(VSG_Params *p);                                                 // VSG control function
+extern void PHASE_LOCKED_LOOP(void);                                                         // Phase-Locked Loop (PLL) control function
+extern void VSG_Control(VSG_Params *p);                                                      // VSG control function
 
 #endif /* APP_INVERTER_H_ */

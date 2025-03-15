@@ -28,7 +28,7 @@ float32 Sample_Pe, Sample_Qe;                           // 电磁功率采样变
 */
 
 // 参考值
-float32 Vref, Iref, Vdc;
+// float32 Vref, Iref, Vdc;
 
 /// @brief sin&cos calculate
 /// @param theta

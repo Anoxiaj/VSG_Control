@@ -3,9 +3,12 @@
 
 static int pulse_f = 0;
 static int pulse_f_Old = 0; // 上面两个参数控制代码每周期只执行一次 模拟芯片里的操作
-float32 m = 0;				// 调制度
 
 /*变量定义*/
+float32 m = 0;	 // 调制度
+#define Iref 100 // 参考电流
+#define Vref 311 // 参考相电压
+#define Vdc 1000 // 直流母线电压
 
 void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函数名：example_func【可以按照想法更改，最后一行处也要改】// out_var[6]输出变量，个数为6  in_var[6]输出变量，个数为6
 {
@@ -23,9 +26,7 @@ void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函�
 	pulse_f = in_var[0];
 
 	/*given*/
-	// Vref = in_var[0];	// 参考相电压
-	Iref = 311; // 参考电感电流
-	// Vdc = in_var[8];	// 直流母线电压
+
 	// m = 2 * Vref / Vdc; // SPWM调制度
 	m = 0.5;
 

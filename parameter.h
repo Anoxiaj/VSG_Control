@@ -10,6 +10,11 @@
 #define Sb 800000.0         // 额定容量800kVA
 #define switch_freq 20000.0 // 20k
 #define delta_time 0.00005  // 1/switch_freq
+#define inv_params_L1 3e-3
+#define inv_params_L2 1e-3
+#define inv_params_C 35e-6
+#define inv_params_RL 0.05
+#define inv_params_RC 0.5
 
 // VSG参数
 
@@ -23,8 +28,8 @@
 #define U_Kp_parameter 0.2
 #define U_Ki_parameter 3
 
-#define I_Kp_parameter 0.012 // 0.004
-#define I_Ki_parameter 9     // 3
+#define I_Kp_parameter 0.2 // 0.004
+#define I_Ki_parameter 200 // 3
 
 /******************离网直流侧350V时*******************/
 // f = 10e3;

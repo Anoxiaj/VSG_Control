@@ -185,6 +185,9 @@ void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedb
     IiPark.d = Id_pid.uo;
     IiPark.q = Iq_pid.uo;
 
+    // IiPark.d = Id_pid.uo - q_feedback * PIEx100 * inv_params_L1; // 解耦：w=PIEx100
+    // IiPark.q = Iq_pid.uo + d_feedback * PIEx100 * inv_params_L1;
+
     iPark(&IiPark, &I_theta); // Park反变换
 
     /*把Park反变换的α和β赋给Clark反变换的α和β*/
@@ -207,8 +210,8 @@ void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedb
     waveC = (IiClark.c + 1) / 2;
 
     jishu++;
-    test1 = Id_pid.err;
-    test2 = Iq_pid.err;
+    test1 = Curr_Iabc.d;
+    test2 = Curr_Iabc.q;
     // test3 = Id_pid.uo;
 }
 
