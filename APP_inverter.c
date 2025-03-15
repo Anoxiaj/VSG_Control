@@ -57,20 +57,20 @@ void OPEN_LOOP(float Modulation)
 
 /// @brief PID Voltage Closed Loop
 /// @param V_ref
-void VOLTAGE_CLOSED_LOOP(float V_ref)
+void VOLTAGE_CLOSED_LOOP(float V_ref, float V_q, float d_feedback, float q_feedback)
 {
     IPARK_REGS UiPark;
     ICLARK_REGS UiClark;
 
-    // /*d轴斜坡给定*/
-    // Ud_ramp.Given = V_ref;
-    // Ud_ramp.delta = 1;
-    // Ud_ramp.length = 1;
+    /*d轴斜坡给定*/
+    Ud_ramp.Given = V_ref;
+    Ud_ramp.delta = 1;
+    Ud_ramp.length = 1;
 
-    // Ramp_Given(&Ud_ramp);
-    // Ud_pid.ref = Ud_ramp.output;
-    Ud_pid.ref = V_ref;
-    Ud_pid.fdb = Vol_Vs.d;
+    Ramp_Given(&Ud_ramp);
+    Ud_pid.ref = Ud_ramp.output;
+    // Ud_pid.ref = V_ref;
+    Ud_pid.fdb = d_feedback;
 
     /*d轴PID计算：单闭环时Kp=0.05 Ki=5*/ // 100: 2 300 ; 150:0.1 50
     Ud_pid.Kp = U_Kp_parameter;
@@ -80,21 +80,21 @@ void VOLTAGE_CLOSED_LOOP(float V_ref)
     Ud_pid.upper_limit = 1;  // d轴PID限幅
     Ud_pid.lower_limit = -1; // d轴PID限幅
 #else
-    Ud_pid.upper_limit = 1;  // d轴PID限幅
-    Ud_pid.lower_limit = -1; // d轴PID限幅
+    Ud_pid.upper_limit = 500;  // d轴PID限幅
+    Ud_pid.lower_limit = -500; // d轴PID限幅
 #endif
 
     Pid_calculation(&Ud_pid); // 计算出d轴pid输出
 
-    // /*q轴斜坡给定*/
-    // Uq_ramp.Given = 0;
-    // Uq_ramp.delta = 1;
-    // Uq_ramp.length = 1;
+    /*q轴斜坡给定*/
+    Uq_ramp.Given = 0;
+    Uq_ramp.delta = 1;
+    Uq_ramp.length = 1;
 
-    // Ramp_Given(&Uq_ramp);
-    // Uq_pid.ref = Uq_ramp.output;
-    Uq_pid.ref = 0;
-    Uq_pid.fdb = Vol_Vs.q;
+    Ramp_Given(&Uq_ramp);
+    Uq_pid.ref = Uq_ramp.output;
+    // Uq_pid.ref = 0;
+    Uq_pid.fdb = q_feedback;
 
     /*q轴PID计算*/
     Uq_pid.Kp = U_Kp_parameter;
@@ -109,7 +109,7 @@ void VOLTAGE_CLOSED_LOOP(float V_ref)
     UiPark.d = Ud_pid.uo;
     UiPark.q = Uq_pid.uo;
 
-    iPark(&UiPark, &VSG_theta); // Park反变换
+    iPark(&UiPark, &I_theta); // Park反变换
 
     /*把Park反变换的α和β赋给Clark反变换的α和β*/
     UiClark.alpha = UiPark.alpha;
@@ -127,8 +127,8 @@ void VOLTAGE_CLOSED_LOOP(float V_ref)
     back_d = Ud_pid.uo;
     back_q = Uq_pid.uo;
 #endif
-    // test1 = Ud_pid.err;
-    // test2 = Uq_pid.err;
+    test1 = Ud_pid.uo;
+    test2 = Uq_pid.uo;
     // test3 = Ud_pid.uo;
 }
 
@@ -210,8 +210,8 @@ void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedb
     waveC = (IiClark.c + 1) / 2;
 
     jishu++;
-    test1 = Curr_Iabc.d;
-    test2 = Curr_Iabc.q;
+    // test1 = Curr_Iabc.d;
+    // test2 = Curr_Iabc.q;
     // test3 = Id_pid.uo;
 }
 

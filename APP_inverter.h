@@ -139,7 +139,7 @@ extern float I_feedback_d, I_feedback_q;
 
 extern void THETA_GENERATE(void);                                                            // Generate the angle of system control for 50Hz(离网)
 extern void OPEN_LOOP(float Modulation);                                                     // Open loop control
-extern void VOLTAGE_CLOSED_LOOP(float V_ref);                                                // Voltage closed loop control
+extern void VOLTAGE_CLOSED_LOOP(float V_ref, float V_q, float d_feedback, float q_feedback); // Voltage closed loop control
 extern void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedback); // Current closed loop control
 extern void PHASE_LOCKED_LOOP(void);                                                         // Phase-Locked Loop (PLL) control function
 extern void VSG_Control(VSG_Params *p);                                                      // VSG control function

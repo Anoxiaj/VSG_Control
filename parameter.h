@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-#define switch_loop 1 // 0：双闭环  1：单闭环
+#define switch_loop 0 // 0：双闭环  1：单闭环
 
 // 逆变器参数
 #define Ub 6000.0           // 输出线电压幅值
@@ -25,8 +25,8 @@
 // #define VSG_Ki_parameter 0.5 * sqrt(3) * Sb / Ub
 
 // 原PID参数
-#define U_Kp_parameter 0.2
-#define U_Ki_parameter 3
+#define U_Kp_parameter 5
+#define U_Ki_parameter 2000
 
 #define I_Kp_parameter 0.2 // 0.004
 #define I_Ki_parameter 200 // 3

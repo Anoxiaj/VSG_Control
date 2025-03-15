@@ -5,10 +5,11 @@ static int pulse_f = 0;
 static int pulse_f_Old = 0; // 上面两个参数控制代码每周期只执行一次 模拟芯片里的操作
 
 /*变量定义*/
-float32 m = 0;	 // 调制度
-#define Iref 100 // 参考电流
-#define Vref 311 // 参考相电压
-#define Vdc 1000 // 直流母线电压
+float32 m = 0; // 调制度
+// #define Iref 100 // 参考电流
+float Iref = 311; // 参考电流
+float Vref = 311; // 参考相电压
+#define Vdc 1000  // 直流母线电压
 
 void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函数名：example_func【可以按照想法更改，最后一行处也要改】// out_var[6]输出变量，个数为6  in_var[6]输出变量，个数为6
 {
@@ -77,6 +78,11 @@ void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函�
 
 		vsg_params.System_V = in_var[14]; // 系统电压有效值
 
+		// if (jishu > 800)
+		// {
+		// 	Vref = Vref + 50;
+		// 	jishu = 0;
+		// }
 		/******************************************/
 
 		// PHASE_LOCKED_LOOP(); // 角度生成-->G_theta
@@ -87,12 +93,12 @@ void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函�
 		INV_XY_CAL(&I_theta); // 采样信号的坐标变换-->(Vol_Vs, Curr_Iabc, Curr_Is)的 d,q
 
 		// OPEN_LOOP(m);
-		// VOLTAGE_CLOSED_LOOP(vsg_params.Em);
+		VOLTAGE_CLOSED_LOOP(Vref, 0, Vol_Vs.d, Vol_Vs.q);
 
 #if switch_loop
 		CURRENT_CLOSED_LOOP(Iref, 0, Curr_Iabc.d, Curr_Iabc.q); // 电流单闭环
 #else
-		CURRENT_CLOSED_LOOP(back_d, back_q); // 双闭环
+		CURRENT_CLOSED_LOOP(back_d, back_q, Curr_Iabc.d, Curr_Iabc.q); // 双闭环
 #endif
 	}
 
