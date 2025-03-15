@@ -85,15 +85,15 @@ void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函�
 		// }
 		/******************************************/
 
-		// PHASE_LOCKED_LOOP(); // 角度生成-->G_theta
+		PHASE_LOCKED_LOOP(); // 角度生成-->G_theta
 
 		// VSG_Control(&vsg_params); // VSG控制-->VSG_theta,Em
 
 		THETA_GENERATE();	  // 角度生成-->U_theta, I_theta
-		INV_XY_CAL(&I_theta); // 采样信号的坐标变换-->(Vol_Vs, Curr_Iabc, Curr_Is)的 d,q
+		INV_XY_CAL(&G_theta); // 采样信号的坐标变换-->(Vol_Vs, Curr_Iabc, Curr_Is)的 d,q
 
 		// OPEN_LOOP(m);
-		VOLTAGE_CLOSED_LOOP(Vref, 0, Vol_Vs.d, Vol_Vs.q);
+		// VOLTAGE_CLOSED_LOOP(Vref, 0, Vol_Vs.d, Vol_Vs.q);
 
 #if switch_loop
 		CURRENT_CLOSED_LOOP(Iref, 0, Curr_Iabc.d, Curr_Iabc.q); // 电流单闭环

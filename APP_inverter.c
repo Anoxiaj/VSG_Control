@@ -127,8 +127,8 @@ void VOLTAGE_CLOSED_LOOP(float V_ref, float V_q, float d_feedback, float q_feedb
     back_d = Ud_pid.uo;
     back_q = Uq_pid.uo;
 #endif
-    test1 = Ud_pid.uo;
-    test2 = Uq_pid.uo;
+    // test1 = Ud_pid.uo;
+    // test2 = Uq_pid.uo;
     // test3 = Ud_pid.uo;
 }
 
@@ -188,7 +188,7 @@ void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedb
     // IiPark.d = Id_pid.uo - q_feedback * PIEx100 * inv_params_L1; // 解耦：w=PIEx100
     // IiPark.q = Iq_pid.uo + d_feedback * PIEx100 * inv_params_L1;
 
-    iPark(&IiPark, &I_theta); // Park反变换
+    iPark(&IiPark, &G_theta); // Park反变换
 
     /*把Park反变换的α和β赋给Clark反变换的α和β*/
     IiClark.alpha = IiPark.alpha;
@@ -221,11 +221,10 @@ void PHASE_LOCKED_LOOP(void)
     CLARK_REGS GClark;
     PARK_REGS GPark;
 
-    /*使用时需要把Sample_Grid_A,B,C赋值给GClark.a,b,c
-    GClark.a = Sample_Grid_A;
-    GClark.b = Sample_Grid_B;
-    GClark.c = Sample_Grid_C;
-    */
+    // 使用时需要把Sample_Grid_A,B,C赋值给GClark.a,b,c
+    GClark.a = Vol_Vs.a;
+    GClark.b = Vol_Vs.b;
+    GClark.c = Vol_Vs.c;
 
     Clark(&GClark);
 
@@ -244,8 +243,8 @@ void PHASE_LOCKED_LOOP(void)
     PLL_pid.ref = 0;
     PLL_pid.fdb = GPark.q;
 
-    PLL_pid.Kp = 1;
-    PLL_pid.Ki = 100;
+    PLL_pid.Kp = 0.5;
+    PLL_pid.Ki = 0;
 
     PLL_pid.upper_limit = +PIEx100;
     PLL_pid.lower_limit = -PIEx100;
@@ -253,16 +252,14 @@ void PHASE_LOCKED_LOOP(void)
     Pid_calculation(&PLL_pid);
 
     PLL_theta = PIEx100 - PLL_pid.uo;
-    G_theta.theta = G_theta.theta + PLL_theta * 0.0001;
-
-    // G_theta.theta = fmod(G_theta.theta, PIEx2);
+    G_theta.theta = G_theta.theta + PLL_theta * delta_time;
 
     G_theta.theta = G_theta.theta > PIEx2 ? (G_theta.theta - PIEx2) : G_theta.theta;
     G_theta.theta = G_theta.theta < 0 ? (G_theta.theta + PIEx2) : G_theta.theta;
 
-    // test1 = 60 * G_theta.theta;
-    // test2 = Sample_Grid_A;
-    // test3 = GPark.q;
+    test1 = 60 * G_theta.theta;
+    test2 = Vol_Vs.a;
+    test3 = GPark.q;
 }
 
 /// @brief Virtual Synchronous Generator (VSG) control function

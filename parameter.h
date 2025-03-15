@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-#define switch_loop 0 // 0：双闭环  1：单闭环
+#define switch_loop 1 // 0：双闭环  1：单闭环
 
 // 逆变器参数
 #define Ub 6000.0           // 输出线电压幅值
