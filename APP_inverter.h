@@ -109,7 +109,6 @@ typedef struct
     float System_w; // 系统角频率 (rad/s)
     float System_V; // 系统电压幅值 (V)
     float System_f; // 系统频率 (Hz)
-    float Em;       // 输出相电压幅值
 } VSG_Params;
 
 extern int jishu;

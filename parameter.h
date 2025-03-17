@@ -3,18 +3,18 @@
 
 #include "main.h"
 
-#define switch_loop 1 // 0：双闭环  1：单闭环
+#define switch_loop 0 // 0：双闭环  1：单闭环
 
 // 逆变器参数
 #define Ub 6000.0           // 输出线电压幅值
 #define Sb 800000.0         // 额定容量800kVA
-#define switch_freq 20000.0 // 20k
-#define delta_time 0.00005  // 1/switch_freq
-#define inv_params_L1 3e-3
-#define inv_params_L2 1e-3
-#define inv_params_C 35e-6
-#define inv_params_RL 0.05
-#define inv_params_RC 0.5
+#define switch_freq 10000.0 // 10k
+#define delta_time 0.0001   // 1/switch_freq
+#define inv_params_L1 0.9e-3
+#define inv_params_L2 0.1e-3
+#define inv_params_C 40e-6
+#define inv_params_RL 0.01
+#define inv_params_RC 0.1
 
 // VSG参数
 
@@ -25,11 +25,11 @@
 // #define VSG_Ki_parameter 0.5 * sqrt(3) * Sb / Ub
 
 // 原PID参数
-#define U_Kp_parameter 5
-#define U_Ki_parameter 2000
+#define U_Kp_parameter 0.6
+#define U_Ki_parameter 1000
 
-#define I_Kp_parameter 0.2 // 0.004
-#define I_Ki_parameter 200 // 3
+#define I_Kp_parameter 0.03 // 0.03
+#define I_Ki_parameter 100  // 35
 
 /******************离网直流侧350V时*******************/
 // f = 10e3;

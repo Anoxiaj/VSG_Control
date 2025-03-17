@@ -70,5 +70,6 @@ extern void Park_d90A(PARK_REGS *p, THETA_REGS *q); // alpha,beta-->d,q(alpha �
 extern void abc2dq(Sample *var, THETA_REGS *p);     // abc ->d,q(constant amplitude transform)
 extern void Ramp_Given(RAMP_REFERENCE *v);          // Ramp Given(given->目标值；delta->变换率；length->变换时间）
 extern void Pid_calculation(PID *p);                // PID calculation
+extern void PQ_Calculation(Sample *v, Sample *i);
 
 #endif /* LIBRARY_H_ */

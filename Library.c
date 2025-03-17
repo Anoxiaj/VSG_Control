@@ -263,3 +263,12 @@ void Pid_calculation(PID *p)
         p->uo = p->upresat;
     }
 }
+
+void PQ_Calculation(Sample *v, Sample *i)
+{
+    Sample_Pe = v->a * i->a + v->b * i->b + v->c * i->c;
+    Sample_Qe = ((v->b - v->c) * i->a + (v->c - v->a) * i->b + (v->a - v->b) * i->c) / sqrt(3);
+
+    test1 = Sample_Pe;
+    test2 = Sample_Qe;
+}

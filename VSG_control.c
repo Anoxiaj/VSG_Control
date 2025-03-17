@@ -55,7 +55,6 @@ void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函�
 		waveC = 0;
 		m = 0;
 		jishu = 0;
-		vsg_params.System_w = 314.15926535897932384626433832795;
 	}
 
 	if (pulse_f_Old == 0 && pulse_f == 1)
@@ -73,11 +72,6 @@ void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函�
 		Curr_Is.b = in_var[10];
 		Curr_Is.c = in_var[11];
 
-		Sample_Pe = in_var[12]; // 电磁功率采样变量
-		Sample_Qe = in_var[13];
-
-		vsg_params.System_V = in_var[14]; // 系统电压有效值
-
 		// if (jishu > 800)
 		// {
 		// 	Vref = Vref + 50;
@@ -85,15 +79,17 @@ void VSG_control_main(double out_var[9], double in_var[15]) // 相当于主函�
 		// }
 		/******************************************/
 
-		PHASE_LOCKED_LOOP(); // 角度生成-->G_theta
+		PQ_Calculation(&Vol_Vs, &Curr_Is); // PQ计算-->Sample_Pe，Sample_Qe
 
-		// VSG_Control(&vsg_params); // VSG控制-->VSG_theta,Em
+		// PHASE_LOCKED_LOOP(); // 角度生成-->G_theta
 
-		THETA_GENERATE();	  // 角度生成-->U_theta, I_theta
-		INV_XY_CAL(&G_theta); // 采样信号的坐标变换-->(Vol_Vs, Curr_Iabc, Curr_Is)的 d,q
+		VSG_Control(&vsg_params); // VSG控制-->VSG_theta,VSG_SystemV
+
+		THETA_GENERATE();		// 角度生成-->U_theta, I_theta
+		INV_XY_CAL(&VSG_theta); // 采样信号的坐标变换-->(Vol_Vs, Curr_Iabc, Curr_Is)的 d,q
 
 		// OPEN_LOOP(m);
-		// VOLTAGE_CLOSED_LOOP(Vref, 0, Vol_Vs.d, Vol_Vs.q);
+		VOLTAGE_CLOSED_LOOP(vsg_params.System_V, 0, Vol_Vs.d, Vol_Vs.q);
 
 #if switch_loop
 		CURRENT_CLOSED_LOOP(Iref, 0, Curr_Iabc.d, Curr_Iabc.q); // 电流单闭环
