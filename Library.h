@@ -40,18 +40,38 @@ typedef struct
     float32 q;
 } Sample;
 
+// 滤波器结构体（保存参数和状态）
+typedef struct
+{
+    float alpha;  // 滤波系数α
+    float y_prev; // 上一次的输出值
+    float dt;     // 采样时间（秒）
+    float fc;     // 截止频率（Hz）
+} LowPassFilter;
+
 extern THETA_REGS U_theta;
 extern THETA_REGS I_theta;
 extern THETA_REGS G_theta;
 extern THETA_REGS VSG_theta;
 
 /*matlab_varible---->C_varible*/
-extern Sample Vol_Vs;                // 机端电压采样变量
-extern Sample Curr_Is;               // 机端电流采样变量
-extern Sample Curr_Iabc;             // 逆变器输出电流采样变量
-extern Sample Vol_Vg;                // 电网电压采样变量
-extern Sample Curr_Ic;               // 滤波电容电流采样变量
-extern float32 Sample_Pe, Sample_Qe; // 电磁功率采样变量
+extern Sample Vol_Vs;    // 机端电压采样变量
+extern Sample Curr_Is;   // 机端电流采样变量
+extern Sample Curr_Iabc; // 逆变器输出电流采样变量
+extern Sample Vol_Vg;    // 电网电压采样变量
+extern Sample Curr_Ic;   // 滤波电容电流采样变量
+extern Sample SVPWM_var;
+extern float Sample_Pe, Sample_Qe; // 电磁功率采样变量
+
+extern LowPassFilter filter_P; // 滤波器变量
+extern LowPassFilter filter_V;
+
+/*****************SVPWM变量************************/
+extern float t_a, t_b, t_c; // 原始输入三相信号
+extern float t_al, t_be;    // 坐标变换变量
+extern int A, B, C, n;      // 扇区判断变量
+extern float T1, T2, T0;    // 时间计算变量
+extern float vta, vtb, vtc; // 参考调制波
 
 extern float32 Vref, Iref, Vdc;
 
@@ -71,5 +91,8 @@ extern void abc2dq(Sample *var, THETA_REGS *p);     // abc ->d,q(constant amplit
 extern void Ramp_Given(RAMP_REFERENCE *v);          // Ramp Given(given->目标值；delta->变换率；length->变换时间）
 extern void Pid_calculation(PID *p);                // PID calculation
 extern void PQ_Calculation(Sample *v, Sample *i);
+extern void init_low_pass_filter(LowPassFilter *filter, float dt, float fc); // 初始化滤波器
+extern void update_low_pass_filter(LowPassFilter *filter, float input);      // 更新滤波器状态，返回当前输出
+extern void SVPWM_Control(Sample *in_var);
 
 #endif /* LIBRARY_H_ */

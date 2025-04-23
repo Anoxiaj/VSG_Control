@@ -8,11 +8,10 @@ const float PIEx100 = 314.15926535897932384626433832795;
 
 float waveA, waveB, waveC;
 
-float test1, test2, test3;
+float test1, test2, test3, test4;
+float test5, test6, test7, test8;
 
 float back_d, back_q; // 双闭环传递参数
-
-float alpha;
 
 PID Ud_pid;
 PID Uq_pid;
@@ -20,15 +19,13 @@ PID Id_pid;
 PID Iq_pid;
 PID PLL_pid;
 PID VSG_pid;
+
 RAMP_REFERENCE Ud_ramp;
 RAMP_REFERENCE Uq_ramp;
 RAMP_REFERENCE Id_ramp;
 RAMP_REFERENCE Iq_ramp;
-VSG_Params vsg_params;
 
-// for pid control
-float U_feedback_d, U_feedback_q;
-float I_feedback_d, I_feedback_q;
+VSG_Params vsg;
 
 /// @brief Generate the angle of system control
 void THETA_GENERATE(void)
@@ -41,8 +38,8 @@ void THETA_GENERATE(void)
     U_theta.theta = theta_50Hz;
     I_theta.theta = theta_50Hz;
 
-    // test1 = U_theta.theta;
-    // test2 = PIEx2;
+    // test5 = 60 * U_theta.theta;
+    // test6 = Vol_Vs.a;
 }
 
 void OPEN_LOOP(float Modulation)
@@ -51,6 +48,10 @@ void OPEN_LOOP(float Modulation)
     v.d = Modulation;
     v.q = 0;
     dq2abc(&v, &I_theta);
+
+    SVPWM_var.a = v.a;
+    SVPWM_var.b = v.b;
+    SVPWM_var.c = v.c;
 
     waveA = (v.a + 1) / 2;
     waveB = (v.b + 1) / 2;
@@ -82,8 +83,8 @@ void VOLTAGE_CLOSED_LOOP(float V_ref, float V_q, float d_feedback, float q_feedb
     Ud_pid.upper_limit = 1;  // d轴PID限幅
     Ud_pid.lower_limit = -1; // d轴PID限幅
 #else
-    Ud_pid.upper_limit = 500;  // d轴PID限幅
-    Ud_pid.lower_limit = -500; // d轴PID限幅
+    Ud_pid.upper_limit = 1000000;  // d轴PID限幅
+    Ud_pid.lower_limit = -1000000; // d轴PID限幅
 #endif
 
     Pid_calculation(&Ud_pid); // 计算出d轴pid输出
@@ -102,8 +103,8 @@ void VOLTAGE_CLOSED_LOOP(float V_ref, float V_q, float d_feedback, float q_feedb
     Uq_pid.Kp = U_Kp_parameter;
     Uq_pid.Ki = U_Ki_parameter;
 
-    Uq_pid.upper_limit = 1;  // d轴PID限幅
-    Uq_pid.lower_limit = -1; // d轴PID限幅
+    Uq_pid.upper_limit = 1000000;  // d轴PID限幅
+    Uq_pid.lower_limit = -1000000; // d轴PID限幅
 
     Pid_calculation(&Uq_pid); // 计算出q轴pid输出
 
@@ -111,7 +112,7 @@ void VOLTAGE_CLOSED_LOOP(float V_ref, float V_q, float d_feedback, float q_feedb
     UiPark.d = Ud_pid.uo;
     UiPark.q = Uq_pid.uo;
 
-    iPark(&UiPark, &VSG_theta); // Park反变换
+    iPark(&UiPark, &U_theta); // Park反变换
 
     /*把Park反变换的α和β赋给Clark反变换的α和β*/
     UiClark.alpha = UiPark.alpha;
@@ -129,9 +130,10 @@ void VOLTAGE_CLOSED_LOOP(float V_ref, float V_q, float d_feedback, float q_feedb
     back_d = Ud_pid.uo;
     back_q = Uq_pid.uo;
 #endif
-    // test1 = Ud_pid.uo;
-    // test2 = Uq_pid.uo;
-    // test3 = Ud_pid.uo;
+    // test5 = V_ref;
+    test5 = d_feedback;
+    // test7 = V_q;
+    test6 = q_feedback;
 }
 
 /// @brief PID Current Closed Loop
@@ -190,6 +192,9 @@ void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedb
     // IiPark.d = Id_pid.uo - q_feedback * PIEx100 * inv_params_L1; // 解耦：w=PIEx100
     // IiPark.q = Iq_pid.uo + d_feedback * PIEx100 * inv_params_L1;
 
+    // IiPark.d = Id_pid.uo + Vol_Vs.d; // 电网电压前馈
+    // IiPark.q = Iq_pid.uo + Vol_Vs.q;
+
     iPark(&IiPark, &VSG_theta); // Park反变换
 
     /*把Park反变换的α和β赋给Clark反变换的α和β*/
@@ -199,12 +204,16 @@ void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedb
     iClark(&IiClark); // Clark反变换
 
     /*有源阻尼测试代码*/
-    // if (jishu > 1000)
+    // if (jishu > 3200) // 16k下对应0.2s处
     // {
-    //     IiClark.a = IiClark.a - Sample_curr_Ca * 0.01;
-    //     IiClark.b = IiClark.b - Sample_curr_Cb * 0.01;
-    //     IiClark.c = IiClark.c - Sample_curr_Cc * 0.01;
+    IiClark.a = IiClark.a - Curr_Ic.a * damping;
+    IiClark.b = IiClark.b - Curr_Ic.b * damping;
+    IiClark.c = IiClark.c - Curr_Ic.c * damping;
     // }
+
+    SVPWM_var.a = IiClark.a;
+    SVPWM_var.b = IiClark.b;
+    SVPWM_var.c = IiClark.c;
 
     /*对调制波进行归一化（SPWM的相电压最大值为(Vdc/2)*/
     waveA = (IiClark.a + 1) / 2;
@@ -212,9 +221,11 @@ void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedb
     waveC = (IiClark.c + 1) / 2;
 
     jishu++;
-    // test1 = Curr_Iabc.d;
-    // test2 = Curr_Iabc.q;
-    // test3 = Id_pid.uo;
+
+    // test1 = I_ref;
+    test7 = d_feedback;
+    // test3 = I_q;
+    test8 = q_feedback;
 }
 
 /// @brief Phase-Locked Loop (PLL) control function
@@ -259,90 +270,80 @@ void PHASE_LOCKED_LOOP(void)
     G_theta.theta = G_theta.theta > PIEx2 ? (G_theta.theta - PIEx2) : G_theta.theta;
     G_theta.theta = G_theta.theta < 0 ? (G_theta.theta + PIEx2) : G_theta.theta;
 
-    // test1 = 60 * G_theta.theta;
-    // test2 = Vol_Vs.a;
-    // test3 = GPark.q;
+    // test5 = 60 * G_theta.theta;
+    // test6 = Vol_Vs.a;
+    // test7 = GPark.q;
 }
 
-/// @brief Virtual Synchronous Generator (VSG) control function
-/// This function initializes VSG parameters, calculates w and voltage deviations,
-/// computes power outputs, updates system w and voltage, and ensures they are within limits.
-/// @param VSG_theta.theta
-/// @param vsg_params.Em
-void VSG_Control(VSG_Params *p)
+void VSG_Params_INIT(VSG_Params *p)
 {
-    // 初始化VSG参数：D↑阻尼越大 J(0.005~0.3)↑ 极点右移增加不稳定风险（不宜过大）
-    p->J = 0.02;                // 虚拟惯量系数
-    p->D = 50;                  // 阻尼系数
-    p->Kp_f = 0.95e4 / PIEx100; // 频率-有功下垂系数
-    p->Kq_v = 0.1;              // 电压-无功下垂系数
-    p->wnom = PIEx100;          // 额定角频率：对应50Hz
-    p->Vnom = 311.0;            // 额定电压峰幅
-    p->P_ref = 14.6e3;          // 有功功率给定
-    p->Q_ref = 0;               // 无功功率给定
+    p->J = 0.05; // 惯量
+    p->D = 3000; // 阻尼
 
-    // 计算角频率偏差（w0-w)
-    float w_deviation = p->System_w - p->wnom; // System_w为系统角频率
+    p->Kw = 1; // 一次调频系数
+    p->Kv = 0; // 一次调压系数
 
-    // 计算Tm-Te-D(w-w0)输出
-    alpha = ((p->P_ref - Sample_Pe) / p->wnom - p->D * w_deviation) / p->J; // P_ref为有功功率给定值，Sample_Pe为电磁功率
+    p->P_ref = 9000; // 参考有功功率
+    p->Q_ref = 0;    // 参考无功功率
 
-    // 更新系统角频率w
-    p->System_w += alpha * delta_time; //
-    // p->System_w = p->System_w + p->wnom;
+    p->w0 = PIEx100;   // 额定角频率
+    p->Vrms_nom = 220; // 额定相电压有效值
 
-    // 更新系统频率
-    p->System_f = p->System_w / PIEx2;
+    p->System_w = PIEx100; // vsg输出角频率
+    p->System_f = 50;      // vsg输出频率
+    p->System_V = 311;     // vsg输出相电压幅值
+    p->Sample_RMS = 0;     // 采样相电压有效值
+}
 
-    // 更新系统相角wt
-    VSG_theta.theta += p->System_w * delta_time;
+void VSG_UPDATE(VSG_Params *vsg_params)
+{
 
-    // θ角mod函数-->确保θ在0-2pi变换
+    /*
+    // float one_w = (vsg_params->w0 - vsg_params->System_w) * vsg_params->Kw;
+    vsg_params->alpha = ((vsg_params->P_ref - Sample_Pe) - vsg_params->D * (vsg_params->System_w - vsg_params->w0)) / vsg_params->J / vsg_params->w0;
+    vsg_params->w_w0 += vsg_params->alpha * delta_time;
+
+    // test4 = vsg_params->P_ref - Sample_Pe;
+
+    vsg_params->System_w = vsg_params->w_w0 + vsg_params->w0;
+
+    // test3 = vsg_params->System_w;
+
+    vsg_params->System_f = vsg_params->System_w / PIEx2;
+
+    VSG_theta.theta = VSG_theta.theta + vsg_params->System_w * delta_time;
+    */
+    vsg_params->System_w1 = delta_time * (vsg_params->P_ref - Sample_Pe) / vsg_params->J / vsg_params->w0 + (1 - delta_time * (vsg_params->D) / vsg_params->J / 314.15927) * vsg_params->System_w + delta_time / vsg_params->J * vsg_params->D; //
+    vsg_params->System_w = vsg_params->System_w1;
+    VSG_theta.theta = VSG_theta.theta + delta_time * vsg_params->System_w;
+
     VSG_theta.theta = VSG_theta.theta > PIEx2 ? (VSG_theta.theta - PIEx2) : VSG_theta.theta;
     VSG_theta.theta = VSG_theta.theta < 0 ? (VSG_theta.theta + PIEx2) : VSG_theta.theta;
 
-    /*******************************************************/
-    /// @brief*无功电压控制
-    /*******************************************************/
-
-    // 计算电压偏差
-    float voltage_deviation = p->Vnom - p->System_V; // System_Voltage为系统电压
-
-    // 计算无功功率输出
-    float Q_output = p->Q_ref + voltage_deviation * p->Kq_v; // Q_ref为无功功率给定值
-
-    VSG_pid.ref = Q_output;  // PID无功功率给定值
-    VSG_pid.fdb = Sample_Qe; // 采样无功功率归一化
-
-    VSG_pid.Kp = 0;
-    VSG_pid.Ki = 100;
-
-    VSG_pid.upper_limit = 400;  // d轴PID限幅
-    VSG_pid.lower_limit = -400; // d轴PID限幅
-
-    // 更新系统电压
-    Pid_calculation(&VSG_pid);
-
-    p->System_V = VSG_pid.uo + p->Vnom; // 311为相电压的峰值
-    // p->System_V = 311;
-
-    // // 给输出限幅
-    // if (vsg_params->Em >= MAX_VOLTAGE)
-    // {
-    //     vsg_params->Em = MAX_VOLTAGE;
-    // }
-    // else if (vsg_params->Em <= MIN_VOLTAGE)
-    // {
-    //     vsg_params->Em = MIN_VOLTAGE;
-    // }
-    // else
-    // {
-    //     vsg_params->Em = vsg_params->Em;
-    // }
+    vsg_params->System_f = vsg_params->System_w / PIEx2;
 
     test1 = Sample_Pe;
-    // test2 = p->System_f;
-    // // test1 = VSG_pid.err;
-    test2 = Sample_Qe;
-    test3 = p->System_V;
+    test2 = vsg_params->System_w;
+    test3 = 50 * VSG_theta.theta;
+    test4 = vsg_params->System_f;
+
+    // test7 = 9000;
+    // test8 = Sample_Pe;
+
+    /***************************************************************************/
+
+    VSG_pid.ref = vsg_params->Q_ref;
+    VSG_pid.fdb = Sample_Qe;
+
+    VSG_pid.Kp = 0;
+    VSG_pid.Ki = 1;
+
+    Id_pid.upper_limit = 400;  // d轴PID限幅
+    Id_pid.lower_limit = -400; // d轴PID限幅
+
+    Pid_calculation(&VSG_pid); // 计算出q轴pid输出
+
+    vsg_params->System_V = 311 + VSG_pid.uo; // 机端电压幅值
+
+    // test4 = VSG_pid.err;
 }

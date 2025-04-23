@@ -95,20 +95,26 @@ typedef struct
 } PID;
 #define PID_DEFAULTS {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-// VSG参数结构体
 typedef struct
 {
-    float J;        // 虚拟惯量系数 (s)
-    float D;        // 阻尼系数
-    float Kp_f;     // 频率-有功下垂系数 (Hz/kW)
-    float Kq_v;     // 电压-无功下垂系数 (V/kVar)
-    float wnom;     // 额定角频率 (rad/s)
-    float Vnom;     // 额定电压幅值 (V)
-    float P_ref;    // 有功功率给定 (W)
-    float Q_ref;    // 无功功率给定 (Var)
-    float System_w; // 系统角频率 (rad/s)
-    float System_V; // 系统电压幅值 (V)
-    float System_f; // 系统频率 (Hz)
+    double J;  // 惯量
+    double D;  // 阻尼
+    double Kw; // 一次调频系数
+    double Kv; // 一次调压系数
+
+    double w0;       // 额定角频率
+    double Vrms_nom; // 额定相电压有效值
+    double P_ref;    // 参考有功功率
+    double Q_ref;    // 参考无功功率
+
+    double System_w;   // vsg k 时刻输出角频率
+    double System_w1;  // vsg (k+1)时刻输出角频率
+    double System_f;   // vsg输出频率
+    double System_V;   // vsg输出相电压幅值
+    double Sample_RMS; // 采样相电压有效值
+
+    double alpha; // 角加速度
+    double w_w0;  // 角速度差
 } VSG_Params;
 
 extern int jishu;
@@ -118,7 +124,8 @@ extern float theta_50Hz, PLL_theta;
 
 extern float back_d, back_q;
 
-extern float test1, test2, test3;
+extern float test1, test2, test3, test4;
+extern float test5, test6, test7, test8;
 
 extern PID Ud_pid;
 extern PID Uq_pid;
@@ -126,21 +133,20 @@ extern PID Id_pid;
 extern PID Iq_pid;
 extern PID PLL_pid;
 extern PID VSG_pid;
+
 extern RAMP_REFERENCE Ud_ramp;
 extern RAMP_REFERENCE Uq_ramp;
 extern RAMP_REFERENCE Id_ramp;
 extern RAMP_REFERENCE Iq_ramp;
 
-extern VSG_Params vsg_params; // 全局VSG参数实例
-
-extern float U_feedback_d, U_feedback_q;
-extern float I_feedback_d, I_feedback_q;
+VSG_Params vsg;
 
 extern void THETA_GENERATE(void);                                                            // Generate the angle of system control for 50Hz(离网)
 extern void OPEN_LOOP(float Modulation);                                                     // Open loop control
 extern void VOLTAGE_CLOSED_LOOP(float V_ref, float V_q, float d_feedback, float q_feedback); // Voltage closed loop control
 extern void CURRENT_CLOSED_LOOP(float I_ref, float I_q, float d_feedback, float q_feedback); // Current closed loop control
 extern void PHASE_LOCKED_LOOP(void);                                                         // Phase-Locked Loop (PLL) control function
-extern void VSG_Control(VSG_Params *p);                                                      // VSG control function
+extern void VSG_Params_INIT(VSG_Params *p);                                                  // VSG参数初始化
+extern void VSG_UPDATE(VSG_Params *vsg_params);                                              // VSG参数更新
 
 #endif /* APP_INVERTER_H_ */

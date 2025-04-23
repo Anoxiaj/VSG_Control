@@ -10,12 +10,23 @@ THETA_REGS G_theta;   // PLL电网theta
 THETA_REGS VSG_theta; // VSG电网theta
 
 /*matlab_varible---->C_varible*/
-Sample Vol_Vs;                // 机端电压采样变量
-Sample Curr_Is;               // 机端电流采样变量
-Sample Curr_Iabc;             // 逆变器输出电流采样变量
-Sample Vol_Vg;                // 电网电压采样变量
-Sample Curr_Ic;               // 滤波电容电流采样变量
-float32 Sample_Pe, Sample_Qe; // 电磁功率采样变量
+Sample Vol_Vs;    // 机端电压采样变量
+Sample Curr_Is;   // 机端电流采样变量
+Sample Curr_Iabc; // 逆变器输出电流采样变量
+Sample Vol_Vg;    // 电网电压采样变量
+Sample Curr_Ic;   // 滤波电容电流采样变量
+Sample SVPWM_var;
+float Sample_Pe, Sample_Qe; // 电磁功率采样变量
+
+LowPassFilter filter_P; // 滤波器变量
+LowPassFilter filter_V;
+
+/*****************SVPWM变量************************/
+float t_a, t_b, t_c; // 原始输入三相信号
+float t_al, t_be;    // 坐标变换变量
+int A, B, C, n;      // 扇区判断变量
+float T1, T2, T0;    // 时间计算变量
+float vta, vtb, vtc; // 参考调制波
 
 /*2025年3月9日VSG控制时将采样变量升级为结构体变量，如上
 
@@ -236,7 +247,7 @@ void Pid_calculation(PID *p)
     // }
 
     // 积分
-    p->ui = p->ui + ((p->err * p->Ki) * SAMPLE_PERIOD);
+    p->ui = p->ui + ((p->err * p->Ki) * delta_time);
     // 给积分限幅
     if (p->ui >= p->upper_limit)
     {
@@ -266,9 +277,152 @@ void Pid_calculation(PID *p)
 
 void PQ_Calculation(Sample *v, Sample *i)
 {
-    Sample_Pe = v->a * i->a + v->b * i->b + v->c * i->c;
+    float Pe = v->a * i->a + v->b * i->b + v->c * i->c;
+    update_low_pass_filter(&filter_P, Pe);
+    Sample_Pe = filter_P.y_prev;
+
     Sample_Qe = ((v->b - v->c) * i->a + (v->c - v->a) * i->b + (v->a - v->b) * i->c) / sqrt(3);
 
-    test1 = Sample_Pe;
-    test2 = Sample_Qe;
+    // test1 = Sample_Pe;
+    // test2 = Sample_Qe;
+}
+
+// 初始化滤波器
+void init_low_pass_filter(LowPassFilter *filter, float dt, float fc)
+{
+    filter->dt = dt;
+    filter->fc = fc;
+    float tau = 1.0 / (6.283185307179586476925286766559 * fc); // 时间常数τ = 1/(2πfc)
+    filter->alpha = dt / (tau + dt);                           // 计算α
+    filter->y_prev = 0.0;                                      // 初始输出设为0（可改为初始输入）
+}
+
+// 更新滤波器状态，返回当前输出
+void update_low_pass_filter(LowPassFilter *filter, float input)
+{
+    // 计算新输出：y[n] = α*x[n] + (1-α)*y[n-1]
+    filter->y_prev = filter->alpha * input + (1 - filter->alpha) * filter->y_prev;
+}
+
+void SVPWM_Control(Sample *in_var)
+{
+    t_a = in_var->a;
+    t_b = in_var->b;
+    t_c = in_var->c;
+
+    // 1、扇区判断
+    //  abc to alpha beta
+    t_al = 0.666666 * t_a - 0.333333 * t_b - 0.333333 * t_c; // 这里系数都是近似值，所以会和仿真输出有一点点误差
+    t_be = 0.57735 * t_b - 0.57735 * t_c;
+    // get n
+    A = t_be > 0 ? 0 : 4;
+    B = (t_be - 1.732 * t_al) > 0 ? 0 : 2;
+    C = (t_be + 1.732 * t_al) > 0 ? 0 : 1;
+
+    switch (A + B + C)
+    {
+    case 0:
+        n = 2;
+        break;
+    case 1:
+        n = 3;
+        break;
+    case 2:
+        n = 1;
+        break;
+    case 3:
+        n = 0;
+        break;
+    case 4:
+        n = 0;
+        break;
+    case 5:
+        n = 4;
+        break;
+    case 6:
+        n = 6;
+        break;
+    default:
+        n = 5;
+        break;
+    }
+
+    // 2、时间计算
+    float t_al1 = t_al * 0.866;
+    float t_be1 = t_be * 0.5;
+    // 下面这个switch可以和上面那个switch合并到一起
+    switch (n)
+    {
+    case 1:
+        T1 = t_al1 - t_be1;
+        T2 = t_be;
+        break;
+    case 2:
+        T1 = t_al1 + t_be1;
+        T2 = -t_al1 + t_be1;
+        break;
+    case 3:
+        T1 = t_be;
+        T2 = -t_al1 - t_be1;
+        break;
+    case 4:
+        T1 = -t_al1 + t_be1;
+        T2 = -t_be;
+        break;
+    case 5:
+        T1 = -t_al1 - t_be1;
+        T2 = t_al1 - t_be1;
+        break;
+    default:
+        T1 = -t_be;
+        T2 = t_al1 + t_be1;
+        break;
+    }
+    T0 = 1 - T1 - T2;
+    // 3、7段式时间分配
+    // 定义过渡变量
+    float tOdd1, tOdd2, tOdd3, tEven1, tEven2, tEven3;
+    tOdd1 = T0 * 0.5;
+    tOdd2 = T1 + tOdd1;
+    tOdd3 = T1 + T2 + tOdd1;
+    tEven1 = T2 + tOdd1;
+    tEven2 = tOdd1;
+    tEven3 = tOdd3;
+    switch (n)
+    {
+    case 1:
+        vta = tOdd1;
+        vtb = tOdd2;
+        vtc = tOdd3;
+        break;
+    case 2:
+        vta = tEven1;
+        vtb = tEven2;
+        vtc = tEven3;
+        break;
+    case 3:
+        vtb = tOdd1;
+        vtc = tOdd2;
+        vta = tOdd3;
+        break;
+    case 4:
+        vtb = tEven1;
+        vtc = tEven2;
+        vta = tEven3;
+        break;
+    case 5:
+        vtc = tOdd1;
+        vta = tOdd2;
+        vtb = tOdd3;
+        break;
+    default:
+        vtc = tEven1;
+        vta = tEven2;
+        vtb = tEven3;
+    }
+
+    // 马鞍波
+    // test5 = vta;
+    // test6 = vtb;
+    // test7 = vtc;
 }
